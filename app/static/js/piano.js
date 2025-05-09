@@ -42,11 +42,11 @@ class Piano {
             </div>
           </div>
 
+        </div>
+
         <div class='button-group'>
             <button id="generateMidi">生成MIDI</button>
             <button id="clearStorage">清空历史</button>
-        </div>
-
         </div>
 
         <canvas id="audioEffectCanvas"></canvas>
@@ -85,6 +85,120 @@ class Piano {
     // 新增：确保 generateMidiFromStorage 方法内的 this 指向 Piano 类实例
     this.generateMidiFromStorage = this.generateMidiFromStorage.bind(this);
     this.clearStoredNotes = this.clearStoredNotes.bind(this);
+
+    // 添加样式到DOM
+    const style = document.createElement('style');
+    style.textContent = `
+          /* 按钮容器样式 */
+          .piano-component .button-group {
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+          }
+    
+          /* 通用按钮样式 */
+          .piano-component button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          }
+    
+          /* 按钮悬浮效果 */
+          .piano-component button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          }
+    
+          /* 生成按钮渐变 */
+          #generateMidi {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            box-shadow: 0 2px 6px rgba(33,150,243,0.3);
+          }
+    
+          /* 清空按钮渐变 */
+          #clearStorage {
+            background: linear-gradient(135deg, #FF5722 0%, #F4511E 100%);
+            color: white;
+            box-shadow: 0 2px 6px rgba(255,87,34,0.3);
+          }
+    
+          /* 按钮图标样式 */
+          .piano-component button::before {
+            content: '';
+            display: block;
+            width: 18px;
+            height: 18px;
+            background-size: contain;
+            filter: brightness(0) invert(1);
+          }
+    
+          /* MIDI图标 */
+          #generateMidi::before {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-9-7h2v2H9v-2zm0-4h2v2H9v-2zm0-4h2v2H9V9z"/></svg>');
+          }
+    
+          /* 清空图标 */
+          #clearStorage::before {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>');
+          }
+    
+          /* 加载动画 */
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          .loading {
+            position: relative;
+            padding-left: 40px;
+          }
+          .loading::after {
+            content: "";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            transform: translateY(-50%);
+          }
+
+          /* 按钮加载状态 */
+          .button-loader {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+          }
+
+          /* 成功状态 */
+          button:not(:disabled)[innerHTML*="✓"] {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+            opacity: 0.9;
+          }
+
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `;
+    document.head.appendChild(style);
   }
 
   // 初始化，插入HTML并启动钢琴
@@ -115,11 +229,10 @@ class Piano {
     // 监听窗口大小变化，重新计算键盘尺寸
     window.addEventListener('resize', this.computeEleSize);
 
-    // 为生成 MIDI 按钮添加点击事件监听器
-    const generateButton = document.getElementById('generateMidi');
-    if (generateButton) {
-      generateButton.addEventListener('click', this.generateMidiFromStorage);
-    }
+    // 在初始化代码中添加点击监听
+    document.getElementById('generateMidi').addEventListener('click', async () => {
+      await this.generateMidiFromStorage();
+    });
 
     const clearButton = document.getElementById('clearStorage');
     if (clearButton) {
@@ -406,46 +519,102 @@ class Piano {
     this.triggerKeyEffect(key, duration);
   }
 
-  // 生成并下载 MIDI 文件
-  generateMidiFromStorage() {
-    const file = new Midi.File();
-    const track = new Midi.Track();
-    file.addTrack(track);
+  async generateMidiFromStorage() {
+    const generateButton = document.getElementById('generateMidi');
+    const originalHTML = generateButton.innerHTML;
+    let midiGenerated = false;
 
-    // 设置标准参数
-    track.setTempo(120);
-    track.addEvent(new Midi.MetaEvent({
-      type: Midi.MetaEvent.TIME_SIG,
-      data: [4, 2, 24, 8]
-    }));
-    // 设置乐器为钢琴
-    track.setInstrument(0, 0);
+    try {
+      // 进入加载状态
+      generateButton.innerHTML = `
+        <div class="button-loader"></div>
+        正在生成...
+      `;
+      generateButton.disabled = true;
 
-    // 从localStorage获取数据
-    const noteArrayStr = localStorage.getItem('playedNotes');
-    // 将字符串解析为数组
-    const noteArray = noteArrayStr ? JSON.parse(noteArrayStr) : [];
+      // 检查本地存储
+      const storedNotes = localStorage.getItem('playedNotes');
+      if (!storedNotes || JSON.parse(storedNotes).length === 0) {
+        throw new Error('没有找到存储的音符数据');
+      }
 
-    var noteDuration;
-    noteArray.forEach((noteName) => {
-      const octave = parseInt(noteName.slice(-1));
-      if (octave < 4) noteDuration = 100; // 低音持续更久
-      else noteDuration = 70; // 高音衰减更快
-      // 音符持续时间随机浮动±10%
-      const duration = Math.floor(noteDuration * (0.9 + Math.random() * 0.2));
-      const velocity = Math.floor(Math.random() * 20) + 70;
-      track.addNote(0, noteName, duration, 0, velocity);
-    });
+      // 异步生成MIDI数据
+      const midiBlob = await new Promise((resolve, reject) => {
+        try {
+          // 创建MIDI文件
+          const file = new Midi.File();
+          const track = new Midi.Track();
+          file.addTrack(track);
 
-    const bytes = file.toBytes();
-    console.log("download begin");
+          // MIDI参数设置
+          track.setTempo(120);
+          track.addEvent(new Midi.MetaEvent({
+            type: Midi.MetaEvent.TIME_SIG,
+            data: [4, 2, 24, 8]
+          }));
+          track.setInstrument(0, 0); // 钢琴音色
 
-    const blob = new Blob([new Uint8Array(bytes.split('').map(c => c.charCodeAt(0)))], { type: 'audio/midi' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'test.mid';
-    a.click();
+          // 添加音符事件
+          const notes = JSON.parse(storedNotes);
+          notes.forEach((noteName, index) => {
+            const octave = parseInt(noteName.slice(-1), 1);
+            const duration = this.calculateNoteDuration(octave);
+            const velocity = Math.floor(Math.random() * 20) + 70;
+            track.addNote(0, noteName, duration, 0, velocity);
+          });
+
+          // 生成二进制数据
+          const bytes = file.toBytes();
+          const buffer = new Uint8Array(bytes.split('').map(c => c.charCodeAt(0)));
+          resolve(new Blob([buffer], { type: 'audio/midi' }));
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      // 触发下载
+      const url = URL.createObjectURL(midiBlob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `composition_${new Date().toISOString().slice(0, 10)}.mid`;
+      document.body.appendChild(anchor);
+      anchor.click();
+
+      // 清理资源
+      setTimeout(() => {
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      }, 1000);
+
+      midiGenerated = true;
+    } catch (error) {
+      console.error('MIDI生成失败:', error);
+      alert(`生成失败: ${error.message}`);
+    } finally {
+      // 恢复按钮状态
+      generateButton.disabled = false;
+      generateButton.innerHTML = midiGenerated
+        ? '✓ 生成成功!'
+        : originalHTML;
+
+      // 成功状态短暂显示
+      if (midiGenerated) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        generateButton.innerHTML = originalHTML;
+      }
+    }
+  }
+
+  // 辅助方法：计算音符时长
+  calculateNoteDuration(octave) {
+    const baseDuration = 100; // 基准时长（毫秒）
+    const durationMap = {
+      3: 1.2,  // 低八度延长
+      4: 1.0,   // 标准时长
+      5: 0.8,   // 高八度缩短
+      6: 0.6
+    };
+    return Math.floor(baseDuration * (durationMap[octave] || 1.0));
   }
 
   // generateMidiFromStorage() {
