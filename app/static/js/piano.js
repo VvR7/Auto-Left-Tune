@@ -82,6 +82,11 @@ class Piano {
     this.triggerKeyEffect = this.triggerKeyEffect.bind(this);
     this.triggerKeyByName = this.triggerKeyByName.bind(this);
 
+    this.showLoadingIndicator = this.showLoadingIndicator.bind(this);
+    this.hideLoadingIndicator = this.hideLoadingIndicator.bind(this);
+    // 创建一个绑定后的事件处理函数引用，以便能够正确移除
+    this.boundHideLoadingIndicator = this.hideLoadingIndicator.bind(this);
+
     // 新增：确保 generateMidiFromStorage 方法内的 this 指向 Piano 类实例
     this.generateMidiFromStorage = this.generateMidiFromStorage.bind(this);
     this.clearStoredNotes = this.clearStoredNotes.bind(this);
@@ -572,6 +577,48 @@ class Piano {
         }
       });
 
+
+      const filename = 'pianonotes.mid';
+      // 创建文件对象
+      const midiFile = new File([midiBlob], filename, { type: 'audio/midi' });
+      // 显示加载指示器
+      this.showLoadingIndicator();
+
+      // 找到文件输入元素和上传按钮
+      const fileInput = document.getElementById('file-input');
+      const uploadBtn = document.getElementById('upload-btn');
+      const selectedFileText = document.getElementById('selected-file');
+
+      // 创建DataTransfer对象并添加文件
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(midiFile);
+
+      // 设置文件输入的文件
+      if (fileInput) {
+        fileInput.files = dataTransfer.files;
+
+        // 触发change事件，确保文件被正确识别
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+
+        // 更新选择文件的显示文本
+        if (selectedFileText) {
+          selectedFileText.textContent = `已选择: ${filename}`;
+        }
+
+        // 启用并自动点击上传按钮
+        if (uploadBtn) {
+          uploadBtn.disabled = false;
+          setTimeout(() => {
+            uploadBtn.click();
+          }, 500); // 延迟500毫秒确保UI更新完成
+        }
+      } else {
+        console.error('未找到文件输入元素');
+        // 隐藏加载指示器，因为无法完成操作
+        this.hideLoadingIndicator();
+      }
+
       // 触发下载
       const url = URL.createObjectURL(midiBlob);
       const anchor = document.createElement('a');
@@ -617,74 +664,51 @@ class Piano {
     return Math.floor(baseDuration * (durationMap[octave] || 1.0));
   }
 
-  // generateMidiFromStorage() {
-  //   const file = new Midi.File();
-  //   const track = new Midi.Track();
-  //   file.addTrack(track);
+  // 显示加载指示器
+  showLoadingIndicator() {
+    // 检查是否已存在加载指示器
+    let loadingIndicator = document.getElementById('loading-indicator');
 
-  //   // 设置标准参数
-  //   track.setTempo(120);
-  //   track.addEvent(new Midi.MetaEvent({
-  //     type: Midi.MetaEvent.TIME_SIG,
-  //     data: [4, 2, 24, 8]
-  //   }));
-  //   track.setInstrument(0, 0);
+    if (!loadingIndicator) {
+      // 创建加载指示器
+      loadingIndicator = document.createElement('div');
+      loadingIndicator.id = 'loading-indicator';
+      loadingIndicator.className = 'loading-indicator';
+      loadingIndicator.innerHTML = `
+          <div class="spinner"></div>
+          <p>正在处理MIDI文件并生成乐谱，请稍候...</p>
+        `;
 
-  //   const noteArrayStr = localStorage.getItem('playedNotes');
-  //   const noteArray = noteArrayStr ? JSON.parse(noteArrayStr) : [];
+      // 插入到可视化琴键和PDF查看器之间
+      const pianoComponent = document.getElementById('pianoComponent');
+      if (pianoComponent) {
+        pianoComponent.parentNode.insertBefore(loadingIndicator, pianoComponent.nextSibling);
+      } else {
+        // 如果找不到钢琴组件，则插入到body
+        document.body.appendChild(loadingIndicator);
+      }
+    } else {
+      // 显示已存在的加载指示器
+      loadingIndicator.style.display = 'flex';
+    }
 
-  //   let currentTime = 0;
-  //   const baseInterval = 64;
+    // 添加事件监听器，监听PDF生成完成事件，使用保存的绑定函数引用
+    document.addEventListener('pdf-generation-complete', this.boundHideLoadingIndicator);
 
-  //   noteArray.forEach((noteName, index) => {
-  //     // 1. 随机力度变化 (70-90)
-  //     const velocity = Math.floor(Math.random() * 20) + 70;
+    // 设置一个超时，如果10秒内没有收到完成事件，也隐藏加载指示器
+    setTimeout(() => this.hideLoadingIndicator(), 10000);
+  }
 
-  //     // 2. 根据音高调整持续时间
-  //     const octave = parseInt(noteName.slice(-1));
-  //     let baseDuration = 100;
-  //     if (octave < 4) baseDuration = 120; // 低音持续更久
-  //     else if (octave > 5) baseDuration = 80; // 高音衰减更快
+  // 隐藏加载指示器
+  hideLoadingIndicator() {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+      loadingIndicator.style.display = 'none';
+    }
 
-  //     // 3. 音符持续时间随机浮动±10%
-  //     const duration = Math.floor(baseDuration * (0.9 + Math.random() * 0.2));
-
-  //     // 4. 音符间隔随机浮动±10%
-  //     const intervalVariation = Math.floor(baseInterval * (0.9 + Math.random() * 0.2));
-
-  //     // 5. 添加音符
-  //     track.addNote(0, noteName, duration, currentTime, velocity);
-
-  //     // // 6. 每4个音符添加踏板控制
-  //     // if (index % 4 === 0) {
-  //     //   track.addEvent(new Midi.Event({
-  //     //     type: Midi.Event.CONTROLLER,
-  //     //     channel: 0,
-  //     //     data: [64, 127], // 踩下踏板
-  //     //     tick: currentTime
-  //     //   }));
-  //     // }
-  //     // if (index % 4 === 3) {
-  //     //   track.addEvent(new Midi.Event({
-  //     //     type: Midi.Event.CONTROLLER,
-  //     //     channel: 0,
-  //     //     data: [64, 0], // 释放踏板
-  //     //     tick: currentTime + 40
-  //     //   }));
-  //     // }
-
-  //     // 更新下一个音符的起始时间
-  //     currentTime += intervalVariation;
-  //   });
-
-  //   const bytes = file.toBytes();
-  //   const blob = new Blob([bytes], { type: 'audio/midi' });
-  //   const url = URL.createObjectURL(blob);
-  //   const a = document.createElement('a');
-  //   a.href = url;
-  //   a.download = 'test.mid';
-  //   a.click();
-  // }
+    // 移除事件监听器，使用保存的绑定函数引用
+    document.removeEventListener('pdf-generation-complete', this.boundHideLoadingIndicator);
+  }
 
   // 播放音符
   async playNote(notename = 'C4', duration = '8n') {
