@@ -45,8 +45,8 @@ class Piano {
         </div>
 
         <div class='button-group'>
-            <button id="generateMidi">生成MIDI</button>
-            <button id="clearStorage">清空历史</button>
+            <button id="begin">开始记录</button>
+            <button id="end">结束记录</button>
         </div>
 
         <canvas id="audioEffectCanvas"></canvas>
@@ -90,6 +90,7 @@ class Piano {
     // 新增：确保 generateMidiFromStorage 方法内的 this 指向 Piano 类实例
     this.generateMidiFromStorage = this.generateMidiFromStorage.bind(this);
     this.clearStoredNotes = this.clearStoredNotes.bind(this);
+    this.recordBegin = this.recordBegin.bind(this);
 
     // 添加样式到DOM
     const style = document.createElement('style');
@@ -126,14 +127,14 @@ class Piano {
           }
     
           /* 生成按钮渐变 */
-          #generateMidi {
+          #end {
             background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
             color: white;
             box-shadow: 0 2px 6px rgba(33,150,243,0.3);
           }
     
           /* 清空按钮渐变 */
-          #clearStorage {
+          #begin {
             background: linear-gradient(135deg, #FF5722 0%, #F4511E 100%);
             color: white;
             box-shadow: 0 2px 6px rgba(255,87,34,0.3);
@@ -150,12 +151,12 @@ class Piano {
           }
     
           /* MIDI图标 */
-          #generateMidi::before {
+          #end::before {
             background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-9-7h2v2H9v-2zm0-4h2v2H9v-2zm0-4h2v2H9V9z"/></svg>');
           }
     
           /* 清空图标 */
-          #clearStorage::before {
+          #begin::before {
             background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>');
           }
     
@@ -235,14 +236,22 @@ class Piano {
     window.addEventListener('resize', this.computeEleSize);
 
     // 在初始化代码中添加点击监听
-    document.getElementById('generateMidi').addEventListener('click', async () => {
-      await this.generateMidiFromStorage();
+    document.getElementById('end').addEventListener('click', async () => {
+      await this.generateMidiFromStorage();   // 在生成函数内部清空
     });
 
-    const clearButton = document.getElementById('clearStorage');
-    if (clearButton) {
-      clearButton.addEventListener('click', this.clearStoredNotes);
+    const beginButton = document.getElementById('begin');
+    if (beginButton) {
+      beginButton.addEventListener('click', this.recordBegin);
     }
+
+    localStorage.setItem('beginTag', 'False');
+    console.log("begin tag is initially false");
+  }
+
+  recordBegin() {
+    console.log("record begins");
+    localStorage.setItem('beginTag', 'True');
   }
 
   // 启动AudioContext
@@ -499,7 +508,8 @@ class Piano {
     }
 
     console.log(`Store note: ${note.name}`);
-    this.noteStorage(lowerCaseNoteName);
+    const beginTag = localStorage.getItem('beginTag');
+    if (beginTag === 'True') this.noteStorage(lowerCaseNoteName);
   }
 
   //音符字符串的存储
@@ -514,6 +524,7 @@ class Piano {
   clearStoredNotes() {
     localStorage.removeItem('playedNotes');
     alert('已清空存储的音符');
+    localStorage.setItem('beginTag', 'False');
   }
 
   // 根据音符名称触发键盘效果
@@ -525,7 +536,7 @@ class Piano {
   }
 
   async generateMidiFromStorage() {
-    const generateButton = document.getElementById('generateMidi');
+    const generateButton = document.getElementById('end');
     const originalHTML = generateButton.innerHTML;
     let midiGenerated = false;
 
@@ -650,6 +661,8 @@ class Piano {
         generateButton.innerHTML = originalHTML;
       }
     }
+
+    this.clearStoredNotes();
   }
 
   // 辅助方法：计算音符时长
