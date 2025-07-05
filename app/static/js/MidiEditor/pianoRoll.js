@@ -926,12 +926,16 @@ canvas.addEventListener('mouseup', (e) => {
 document.getElementById("midiFileInput").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) {
-        alert("File not exists!");
+        alert("文件不存在!");
         return;
     }
 
     const arrayBuffer = await file.arrayBuffer();
     midiData = new Midi(arrayBuffer);
+    if (midiData.tracks[0].notes.length > 80) {
+        alert("MIDI文件过大，上传失败！");
+        return;
+    }
 
     // 初始化轨道可见性（默认全部可见）
     trackVisibility = midiData.tracks.map(() => true);
@@ -1201,19 +1205,6 @@ document.getElementById("exportBtn").addEventListener("click", () => {
     // 提供粗粒度的回溯功能
     historyManager.setSavePoint();
 });
-
-// 初始化滚动事件监听
-function initScrollHandlers() {
-    // 假设使用了滚动容器
-    const scrollContainer = document.getElementById('canvasWrapper');
-    if (!scrollContainer) {
-        console.warn("Cannot find scroll container");
-        return;
-    }
-
-    // 监听滚动事件
-    scrollContainer.addEventListener('scroll', handleScroll);
-}
 
 // 节流控制变量
 let isRendering = false;
