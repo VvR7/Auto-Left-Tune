@@ -274,6 +274,7 @@ confirmBtn.addEventListener('click', () => {
         // 如何优化？
         const idx = track.notes.findIndex(note => note === newNote);
         noteToIndexMap.set(key, { trackIndex, idx });
+        addNoteToSpatialIndex(noteObj); // 添加到空间索引中
     }
     else {
         alert("请确保输入的时间、持续时间和音符名称有效！");
@@ -475,6 +476,21 @@ confirmTime.addEventListener('click', () => {
             // redrawCanvas(currentMidi); // 重新绘制画布
             redrawNote(oldNote, choosedNote);
         }
+
+        const key2 = `${choosedNote.trackIndex}-${choosedNote.note.time}-${choosedNote.note.midi}`;  // 自定义哈希键
+
+        allNotes.delete(key);
+        allNotes.set(key2, choosedNote);
+
+        noteInTrackMap.delete(key);
+        noteInTrackMap.set(key2, choosedNote.note); // 更新音符在noteInTrackMap中的位置
+
+        noteToIndexMap.delete(key);
+        track.notes.sort((a, b) => a.time - b.time); // 确保按时间排序
+        const idx = track.notes.findIndex(note => note.time === choosedNote.note.time && note.midi === choosedNote.note.midi && note.duration === choosedNote.note.duration); // 找到新的索引
+        noteToIndexMap.set(key2, { trackIndex: choosedNote.trackIndex, idx: idx }); // 更新音符在noteToIndexMap中的位置
+
+        addNoteToSpatialIndex(choosedNote); // 更新空间索引
     }
     timeInputBox.style.display = 'none';
 
@@ -748,17 +764,10 @@ canvas.addEventListener('mousedown', (e) => {
     addBtnContainer.style.display = 'none';
     menu.style.display = 'none';
 
-    addNoteContainer.style.display = 'none';
-    resetBtn.click(); // 重置添加音符的容器
-
-    sliderContainer.style.display = 'none';
-    resetSliderValue.click(); // 重置滑块的容器
-
-    timeInputBox.style.display = 'none';
-    resetTime.click(); // 重置时间输入框
-
-    nameInputBox.style.display = 'none';
-    resetName.click(); // 重置名称输入框
+    // addNoteContainer.style.display = 'none';
+    // sliderContainer.style.display = 'none';
+    // timeInputBox.style.display = 'none';
+    // nameInputBox.style.display = 'none';
 
     draggedNote = locate(x, y, tolerance);
     // locate之后立即删除，反正在mouseup之后还会将新的添加进去
@@ -954,6 +963,8 @@ document.getElementById("midiFileInput").addEventListener("change", async (e) =>
     historyManager = new MidiHistoryManager(currentMidi, allNotes, trackVisibility);
 
     initHistoryUI();
+
+    historyList.innerHTML = ""; // 清空历史记录列表
 });
 
 // 新增：初始化历史记录UI的函数
