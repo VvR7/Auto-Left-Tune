@@ -3,7 +3,7 @@ import shutil
 import os
 
 # 仓库信息
-repo_id = "VRRRRR/model1"
+repo_id = "jerryzhou2/ALT_transformer"
 filename = "model1.pt"
 
 # 下载到 huggingface 缓存路径
