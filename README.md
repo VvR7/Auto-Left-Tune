@@ -1,4 +1,4 @@
-# AutoLeftPiano:让AI为您的音乐插上翅膀
+# Auto-Left-Tune:让AI为您的音乐插上翅膀
 ![model](pic/model.png)
 ![Pytorch](pic/pytorch.png)
 ![python](pic/python.png)
