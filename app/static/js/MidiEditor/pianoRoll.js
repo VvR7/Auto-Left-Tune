@@ -709,12 +709,14 @@ confirmName.addEventListener('click', () => {
 
     const noteInAll = allNotes.get(key);
     if (noteInAll) {
+        removeNoteFromSpatialIndex(noteInAll); // 从空间索引中删除旧的音符
         noteInAll.note.name = newName; // 更新音符名称
         noteInAll.note.midi = newMidi; // 更新音符的 MIDI 值
         noteInAll.y = canvas.height - ((newMidi - pitchBase + 1) * noteHeight); // 更新y坐标
 
         allNotes.delete(key);
         allNotes.set(newKey, noteInAll); // 使用新的键存储音符
+        addNoteToSpatialIndex(noteInAll); // 重新添加到空间索引中
     }
     else {
         console.error("Cannot find name-modified note in allNotes");
