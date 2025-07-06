@@ -97,13 +97,6 @@ AutoLeftPiano/
 - 乐谱PDF自动生成，支持在线查看与下载
 - 丰富的演奏教学与示范，适合学习与创作
 
-## 联系与反馈
-
-如有问题或建议，欢迎在项目主页提交 Issue，或联系开发者。
-
----
-
-如需更详细的功能说明，请参考 Docs/用户手册.pdf。
 
 ## 技术实现
 
@@ -113,57 +106,8 @@ AutoLeftPiano/
 - **动画**: CSS3 Animations with cubic-bezier easing
 - **响应式**: CSS Media Queries
 
-## 钢琴卷帘窗技术细节
+## 联系与反馈
 
-卷帘窗效果通过以下技术实现：
-- CSS3 渐变背景和阴影效果
-- transform 和 opacity 动画
-- 模糊滤镜过渡
-- JavaScript 动态位置计算
-- 事件驱动的动画触发
+如有问题或建议，欢迎在项目主页提交 Issue，或联系开发者。
 
-## 安装依赖
 
-```bash
-pip install -r requirements.txt
-```
-
-## 项目结构
-
-```
-AutoLeftPiano/
-├── app/
-│   ├── static/
-│   │   ├── css/
-│   │   │   └── piano.css      # 钢琴和卷帘窗样式
-│   │   └── js/
-│   │       └── piano.js       # 钢琴功能和动画逻辑
-│   └── templates/
-│       └── index.html         # 主页模板
-└── run.py                     # 应用启动文件
-```
-
-## Quick Start
-### Platform
-Windows 10+
-
-ubuntu 20.04+
-### Start APP
-pip install -r requirements.txt
-
-python3 run.py
-## 项目介绍
-### 各个文件夹介绍
-config: 配置文件，里面存了一些路径的信息
-
-static: 静态资源文件夹，包含CSS、JavaScript、音频样本和音符资源
-
-templates: HTML模板文件夹，用于前端页面渲染
-
-files: 文件存储目录，包含uploads(上传的MIDI文件)和outputs(生成的输出文件)子目录
-
-utils: 工具函数目录，包含transform.py用于MIDI文件处理和PDF生成
-
-models: 数据模型目录，包含session.py用于管理用户会话数据
-
-routes: 路由处理目录，包含main.py定义了所有HTTP请求处理逻辑
